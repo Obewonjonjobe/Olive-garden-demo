@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="darkreader-lock">
 <meta name="color-scheme" content="dark">
-<title>Garden Solar Map · Olive St.</title>
+<meta name="description" content="Interactive solar mapping and crop planning tool for the Olive St. Community Garden in Oxford, MI.">
+<meta property="og:title" content="Olive St. Community Garden — Solar Map & Planner">
+<meta property="og:description" content="Interactive solar mapping, shadow analysis, and crop planning for the Olive St. Community Garden in Oxford, MI.">
+<meta property="og:type" content="website">
+<title>Solar Map · Olive St. Community Garden</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -38,6 +42,12 @@ body {
   white-space: nowrap;
 }
 #altaz { margin-left: auto; font-size: 10px; color: #7d8590; white-space: nowrap; }
+.nav-link {
+  font-size: 9px; color: #7d8590; text-decoration: none;
+  border: 1px solid #30363d; border-radius: 4px;
+  padding: 2px 8px; white-space: nowrap;
+}
+.nav-link:hover { color: #ffd166; border-color: #ffd166; }
 
 #body {
   display: flex;
@@ -144,6 +154,7 @@ input[type=range] { width: 100%; accent-color: #ffd166; cursor: pointer; height:
   <h1>🌿 Olive St. Garden Solar Map · Oxford MI 42.82°N</h1>
   <div id="season-badge">Summer ☀️</div>
   <div id="altaz">☀ — alt · — az</div>
+  <a href="planting-guide.html" class="nav-link">📋 Planting Guide</a>
 </div>
 
 <div id="body">

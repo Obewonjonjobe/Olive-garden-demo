@@ -1,0 +1,9 @@
+{
+  "name": "olive-st-garden",
+  "version": "1.0.0",
+  "description": "Solar mapping and crop planning tools for the Olive St. Community Garden, Oxford MI",
+  "private": true,
+  "scripts": {
+    "start": "npx serve public"
+  }
+}
