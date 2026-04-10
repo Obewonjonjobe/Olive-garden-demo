@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="darkreader-lock">
+<meta name="color-scheme" content="dark">
+<title>Olive St. Community Garden</title>
+<style>
+/* ── Reset & base ─────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow:hidden;background:#0d1117;color:#e6edf3;font-family:'Courier New',monospace}
+
+/* ── App shell ────────────────────────────────────────────────────── */
+#app{display:flex;flex-direction:column;height:100dvh;width:100dvw;position:relative}
+
+/* ── Top bar ──────────────────────────────────────────────────────── */
+#topbar{
+  background:#161b22;border-bottom:1px solid #30363d;
+  padding:0 12px;height:36px;flex-shrink:0;
+  display:flex;align-items:center;gap:10px;
+  position:relative;z-index:10;
+}
+#topbar h1{font-size:11px;color:#ffd166;white-space:nowrap}
+#season-badge{border-radius:20px;padding:2px 8px;font-size:9px;font-weight:700;border:1px solid transparent;white-space:nowrap}
+#altaz{margin-left:auto;font-size:9px;color:#7d8590;white-space:nowrap}
+
+/* ── Nav bar (mode buttons) ───────────────────────────────────────── */
+#navbar{
+  background:#161b22;border-bottom:1px solid #30363d;
+  padding:5px 8px;flex-shrink:0;
+  display:flex;gap:5px;flex-wrap:nowrap;
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  position:relative;z-index:10;
+}
+#navbar::-webkit-scrollbar{display:none;}
+.nbtn{
+  padding:5px 10px;border-radius:5px;border:1px solid #30363d;
+  background:transparent;color:#7d8590;font-size:10px;
+  cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  user-select:none;
+}
+.nbtn:active{opacity:0.7}
+.nbtn.active{border-color:#ffd166;background:rgba(255,209,102,0.14);color:#ffd166}
+
+/* ── Main body: sidebar + canvas ─────────────────────────────────── */
+#body{display:flex;flex:1;overflow:hidden;min-height:0;position:relative}
+
+/* ── Sidebar controls ─────────────────────────────────────────────── */
+#controls{
+  width:190px;flex-shrink:0;
+  background:#161b22;border-right:1px solid #30363d;
+  padding:8px;display:flex;flex-direction:column;gap:5px;
+  overflow-y:auto;overflow-x:hidden;
+  position:relative;z-index:5;
+}
+.ctrl{display:flex;flex-direction:column;gap:2px}
+.ch{display:flex;justify-content:space-between;align-items:baseline}
+.cl{font-size:8px;color:#7d8590;text-transform:uppercase}
+.cv{font-size:10px;color:#ffd166;font-weight:700}
+input[type=range]{width:100%;accent-color:#ffd166;cursor:pointer;height:18px;touch-action:manipulation}
+.ticks{display:flex;justify-content:space-between}.ticks span{font-size:7px;color:#444}
+#anim-btn{
+  padding:5px;border-radius:4px;border:1px solid #30363d;
+  background:transparent;color:#7d8590;font-size:9px;
+  cursor:pointer;font-family:inherit;touch-action:manipulation;
+}
+#anim-btn.active{border-color:#ffd166;color:#ffd166}
+.stats{border-top:1px solid #30363d;padding-top:4px;display:flex;flex-direction:column;gap:3px}
+.sr{display:flex;justify-content:space-between;font-size:8px}
+.sk{color:#7d8590}.sv{color:#ffd166;font-weight:700}
+.legend{border-top:1px solid #30363d;padding-top:4px}
+.lt{font-size:7px;color:#7d8590;text-transform:uppercase;margin-bottom:3px}
+.li{display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:8px;color:#7d8590}
+.lsw{width:14px;height:8px;border-radius:2px;flex-shrink:0}
+/* panels inside sidebar */
+.panel{display:none}.panel.vis{display:flex;flex-direction:column;gap:4px}
+.psec{font-size:7px;color:#7d8590;text-transform:uppercase;margin-top:4px;padding-bottom:2px;border-bottom:1px solid #30363d}
+.prow{display:flex;align-items:center;gap:5px;padding:2px 0;cursor:pointer;font-size:8px;color:#aaa}
+.prow:hover{color:#fff}
+.prow input[type=checkbox]{accent-color:#ffd166;width:12px;height:12px;flex-shrink:0;touch-action:manipulation}
+.pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptag{font-size:6px;padding:1px 3px;border-radius:4px;flex-shrink:0}
+.pt-early{background:#1b4a20;color:#6bcb77}.pt-mid{background:#4a3800;color:#ffd166}.pt-late{background:#4a1a00;color:#f4a261}
+.ptoggle{font-size:7px;color:#7d8590;cursor:pointer;text-decoration:underline;touch-action:manipulation}
+#plant-info{border-top:1px solid #30363d;padding-top:3px;font-size:7px;color:#7d8590;line-height:1.4}
+#plant-info strong{color:#ffd166}
+/* tree panel */
+.tree-item{
+  display:flex;align-items:center;gap:4px;font-size:8px;color:#aaa;
+  padding:5px 4px;border-bottom:1px solid #1a1e24;cursor:pointer;
+  touch-action:manipulation;
+}
+.tree-item.selected{background:rgba(255,209,102,0.15);border-left:2px solid #ffd166;color:#fff}
+.tdel{background:none;border:none;color:#555;cursor:pointer;font-size:10px;font-family:inherit;padding:2px 5px;margin-left:auto;touch-action:manipulation}
+.tdel:hover{color:#f85050}
+.tree-form label{font-size:7px;color:#7d8590;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.tree-form input[type=number]{width:52px;background:#0d1117;border:1px solid #30363d;color:#e6edf3;font-family:inherit;font-size:10px;padding:3px 5px;border-radius:3px}
+.tree-add-btn{
+  background:#ffd166;color:#0d1117;border:none;font-family:inherit;
+  font-size:9px;font-weight:700;padding:6px 10px;border-radius:3px;
+  cursor:pointer;margin-top:4px;width:100%;touch-action:manipulation;
+}
+.mbtn{
+  flex:1;padding:5px 2px;border-radius:4px;border:1px solid #30363d;
+  background:transparent;color:#7d8590;font-size:8px;
+  cursor:pointer;font-family:inherit;min-width:0;touch-action:manipulation;
+}
+.mbtn.active{border-color:#ffd166;background:rgba(255,209,102,0.12);color:#ffd166}
+
+/* ── Garden canvas area ───────────────────────────────────────────── */
+#main-area{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+#garden-wrap{flex:1;display:flex;background:#000;overflow:hidden}
+#garden-svg{flex:1;display:block;touch-action:none}
+
+/* ── Full-screen overlay panels (Guide & Tasks) ───────────────────── */
+#overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:#0d1117;z-index:20;
+  display:flex;flex-direction:column;
+  transform:translateX(100%);
+  transition:transform 0.25s ease;
+  pointer-events:none;
+}
+#overlay.open{transform:translateX(0);pointer-events:all}
+#overlay-topbar{
+  background:#161b22;border-bottom:1px solid #30363d;
+  padding:0 12px;height:40px;flex-shrink:0;
+  display:flex;align-items:center;gap:10px;
+}
+#overlay-title{font-size:12px;color:#ffd166;font-weight:700}
+#overlay-back{
+  margin-left:auto;background:transparent;border:1px solid #30363d;
+  color:#7d8590;font-family:inherit;font-size:9px;padding:4px 10px;
+  border-radius:4px;cursor:pointer;touch-action:manipulation;
+}
+#overlay-back:hover{color:#ffd166;border-color:#ffd166}
+#overlay-tabs{
+  display:flex;gap:6px;padding:8px 12px;
+  background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;
+  overflow-x:auto;overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;flex-wrap:nowrap;
+}
+#overlay-tabs::-webkit-scrollbar{display:none;}
+.otab{
+  padding:5px 14px;border-radius:5px;border:1px solid #30363d;
+  background:transparent;color:#7d8590;font-size:10px;
+  cursor:pointer;font-family:inherit;touch-action:manipulation;
+}
+.otab.active{border-color:#ffd166;background:rgba(255,209,102,0.14);color:#ffd166}
+#overlay-body{flex:1;overflow-y:auto;padding:14px 16px}
+
+/* ── Guide styles ─────────────────────────────────────────────────── */
+.g-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.g-fbtn{
+  background:transparent;border:1px solid #30363d;color:#7d8590;
+  font-family:inherit;font-size:9px;padding:4px 10px;border-radius:4px;cursor:pointer;
+  touch-action:manipulation;
+}
+.g-fbtn:hover,.g-fbtn.act{border-color:#ffd166;color:#ffd166;background:rgba(255,209,102,0.1)}
+.gtw{overflow-x:auto}
+.guide-table{width:100%;border-collapse:collapse;font-size:10px;background:#161b22;border-radius:6px;overflow:hidden;min-width:580px}
+.guide-table th{background:#1a1e26;color:#ffd166;font-size:8px;text-transform:uppercase;padding:8px;text-align:left}
+.guide-table td{padding:7px 8px;border-bottom:1px solid #21262d;color:#ccc;vertical-align:top}
+.guide-table tr:hover td{background:#1a1e26}
+.g-name{color:#ffd166;font-weight:700;font-size:11px}
+.g-badge{font-size:7px;padding:2px 5px;border-radius:8px;display:inline-block;margin-top:3px}
+.g-veg{background:#1a3a18;color:#6bcb77}.g-root{background:#3a2a10;color:#d4a24e}
+.g-flower{background:#2a1530;color:#d080c0}.g-squash{background:#2a3010;color:#a0b040}.g-fruit{background:#3a1818;color:#e06060}
+.g-timing{font-size:8px;padding:2px 6px;border-radius:6px}
+.g-early{background:#1b3a20;color:#6bcb77}.g-mid{background:#3a2a00;color:#ffd166}.g-late{background:#3a1a00;color:#f4a261}
+
+/* ── Tasks styles ─────────────────────────────────────────────────── */
+.act-month-bar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #30363d}
+.act-mbtn{
+  background:transparent;border:1px solid #30363d;color:#7d8590;
+  font-family:inherit;font-size:9px;padding:4px 8px;border-radius:4px;cursor:pointer;
+  touch-action:manipulation;
+}
+.act-mbtn:hover,.act-mbtn.act{border-color:#ffd166;color:#ffd166;background:rgba(255,209,102,0.1)}
+.act-add{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:14px}
+.act-add h3{font-size:10px;color:#ffd166;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.act-frow{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.act-frow input,.act-frow select,.act-frow textarea{
+  background:#0d1117;border:1px solid #30363d;color:#e6edf3;
+  font-family:inherit;font-size:11px;padding:5px 8px;border-radius:4px;outline:none;
+}
+.act-frow input:focus,.act-frow textarea:focus{border-color:#ffd166}
+.act-frow input{flex:1;min-width:120px}.act-frow select{min-width:70px}
+.act-frow textarea{width:100%;min-height:48px;resize:vertical}
+.act-abtn{
+  background:#ffd166;color:#0d1117;border:none;font-family:inherit;
+  font-size:10px;font-weight:700;padding:6px 16px;border-radius:4px;cursor:pointer;
+  touch-action:manipulation;
+}
+.act-grp{margin-bottom:16px}
+.act-grpt{font-size:10px;color:#7d8590;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #21262d}
+.act-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:8px 10px;margin-bottom:5px;display:flex;align-items:flex-start;gap:8px}
+.act-card.done{opacity:0.35}.act-card.done .act-title{text-decoration:line-through}
+.act-chk{width:15px;height:15px;accent-color:#ffd166;flex-shrink:0;margin-top:2px;cursor:pointer;touch-action:manipulation}
+.act-body{flex:1;min-width:0}
+.act-title{font-size:11px;color:#e6edf3;font-weight:700}
+.act-desc{font-size:9px;color:#7d8590;margin-top:3px;line-height:1.4}
+.act-meta{font-size:8px;color:#555;margin-top:4px;display:flex;gap:6px;align-items:center}
+.pri{font-size:7px;padding:2px 5px;border-radius:5px;font-weight:700;text-transform:uppercase}
+.pri-high{background:#3a1515;color:#f85050}.pri-med{background:#3a2a10;color:#ffd166}.pri-low{background:#152a15;color:#6bcb77}
+.act-del{background:none;border:none;color:#555;cursor:pointer;font-size:9px;font-family:inherit;touch-action:manipulation}
+.act-del:hover{color:#f85050}
+
+/* ── Plant Manager ────────────────────────────────────────────────── */
+.pm-section{margin-bottom:20px}
+.pm-section-title{
+  font-size:10px;color:#ffd166;text-transform:uppercase;letter-spacing:.06em;
+  padding-bottom:6px;border-bottom:1px solid #30363d;margin-bottom:12px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.pm-card{
+  background:#161b22;border:1px solid #30363d;border-radius:6px;
+  padding:10px 12px;margin-bottom:6px;display:flex;align-items:flex-start;gap:10px;
+}
+.pm-card.custom-plant{border-color:#2a4a2a}
+.pm-swatch{width:16px;height:16px;border-radius:4px;flex-shrink:0;margin-top:2px;border:1px solid rgba(255,255,255,0.15)}
+.pm-body{flex:1;min-width:0}
+.pm-name{font-size:12px;color:#e6edf3;font-weight:700}
+.pm-meta{font-size:9px;color:#7d8590;margin-top:3px;line-height:1.5}
+.pm-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.pm-tag{font-size:7px;padding:2px 6px;border-radius:8px;font-weight:700;text-transform:uppercase}
+.pm-tag-cat-root  {background:#3a2a10;color:#d4a24e}
+.pm-tag-cat-veg   {background:#1a3a18;color:#6bcb77}
+.pm-tag-cat-flower{background:#2a1530;color:#d080c0}
+.pm-tag-cat-squash{background:#2a3010;color:#a0b040}
+.pm-tag-cat-fruit {background:#3a1818;color:#e06060}
+.pm-tag-cat-herb  {background:#1a2a30;color:#60c0d0}
+.pm-tag-cat-other {background:#252525;color:#aaa}
+.pm-tag-timing-early{background:#1b3a20;color:#6bcb77}
+.pm-tag-timing-mid  {background:#3a2a00;color:#ffd166}
+.pm-tag-timing-late {background:#3a1a00;color:#f4a261}
+.pm-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.pm-edit-btn,.pm-del-btn{
+  background:none;border:1px solid #30363d;color:#7d8590;
+  font-family:inherit;font-size:8px;padding:3px 7px;border-radius:3px;cursor:pointer;
+  touch-action:manipulation;white-space:nowrap;
+}
+.pm-edit-btn:hover{border-color:#ffd166;color:#ffd166}
+.pm-del-btn:hover{border-color:#f85050;color:#f85050}
+.pm-built-in-badge{font-size:7px;color:#444;margin-left:6px;font-weight:400}
+/* Add/Edit form */
+.pm-form{
+  background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;margin-bottom:18px;
+}
+.pm-form-title{font-size:11px;color:#ffd166;font-weight:700;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.pm-form-close{background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0;touch-action:manipulation}
+.pm-form-close:hover{color:#f85050}
+.pm-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:flex-end}
+.pm-field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:100px}
+.pm-field label{font-size:8px;color:#7d8590;text-transform:uppercase;letter-spacing:.04em}
+.pm-field input,.pm-field select,.pm-field textarea{
+  background:#161b22;border:1px solid #30363d;color:#e6edf3;
+  font-family:inherit;font-size:11px;padding:5px 8px;border-radius:4px;outline:none;width:100%;
+}
+.pm-field input:focus,.pm-field select:focus,.pm-field textarea:focus{border-color:#ffd166}
+.pm-field textarea{min-height:52px;resize:vertical}
+.pm-field input[type=color]{padding:2px 4px;height:32px;cursor:pointer}
+.pm-row-check{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.pm-row-check label{display:flex;align-items:center;gap:4px;font-size:9px;color:#aaa;cursor:pointer}
+.pm-row-check input[type=checkbox]{accent-color:#ffd166;width:12px;height:12px;touch-action:manipulation}
+.pm-hint{font-size:8px;color:#444;margin-top:-4px;margin-bottom:8px}
+.pm-submit-btn{
+  background:#ffd166;color:#0d1117;border:none;font-family:inherit;font-weight:700;
+  font-size:10px;padding:7px 18px;border-radius:4px;cursor:pointer;touch-action:manipulation;
+}
+.pm-cancel-btn{
+  background:none;border:1px solid #30363d;color:#7d8590;font-family:inherit;
+  font-size:10px;padding:7px 14px;border-radius:4px;cursor:pointer;touch-action:manipulation;margin-left:6px;
+}
+.pm-add-new-btn{
+  background:rgba(255,209,102,0.1);border:1px dashed #ffd166;color:#ffd166;
+  font-family:inherit;font-size:10px;padding:8px;border-radius:5px;
+  cursor:pointer;touch-action:manipulation;width:100%;text-align:center;margin-bottom:14px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <h1>🌿 Olive St. Community Garden · Oxford MI</h1>
+    <div id="season-badge">Summer ☀️</div>
+    <div id="altaz">☀ —</div>
+  </div>
+
+  <!-- Mode navigation — lives ABOVE the body so it's never under the SVG -->
+  <div id="navbar">
+    <button class="nbtn active" id="btn-live"    onclick="setMode('live')">☀ Live</button>
+    <button class="nbtn"        id="btn-daily"   onclick="setMode('daily')">📊 Day</button>
+    <button class="nbtn"        id="btn-plant"   onclick="setMode('plant')">🌱 Plant</button>
+    <button class="nbtn"        id="btn-trees"   onclick="setMode('trees')">🌳 Trees</button>
+    <button class="nbtn"        id="btn-guide"   onclick="openOverlay('guide')">📋 Guide</button>
+    <button class="nbtn"        id="btn-actions" onclick="openOverlay('actions')">📝 Tasks</button>
+    <button class="nbtn"        id="btn-plants"  onclick="openOverlay('plants')">🌿 + Plants</button>
+  </div>
+
+  <!-- Main body -->
+  <div id="body">
+
+    <!-- Sidebar -->
+    <div id="controls">
+
+      <!-- Solar panel (live / daily) -->
+      <div id="solar-panel" class="panel vis">
+        <div class="ctrl">
+          <div class="ch"><span class="cl">Time</span><span class="cv" id="lbl-time">12:00 PM</span></div>
+          <input type="range" id="sl-time" min="4.5" max="20.5" step="0.1" value="12" oninput="onTime(this.value)">
+          <div class="ticks"><span>5am</span><span>Noon</span><span>9pm</span></div>
+        </div>
+        <div class="ctrl">
+          <div class="ch"><span class="cl" id="lbl-wk-date">Week — Jun 27</span><span class="cv" id="lbl-week">Wk 13</span></div>
+          <input type="range" id="sl-week" min="0" max="25" step="1" value="12" oninput="onWeek(this.value)">
+          <div class="ticks"><span>Jan</span><span>Jul</span><span>Dec</span></div>
+        </div>
+        <button id="anim-btn" onclick="toggleAnim()">▶ Animate Day</button>
+        <div class="stats">
+          <div class="sr"><span class="sk">Sun alt</span><span class="sv" id="st-alt">—</span></div>
+          <div class="sr"><span class="sk">Sun az</span><span class="sv" id="st-az">—</span></div>
+          <div class="sr"><span class="sk">Center hrs</span><span class="sv" id="st-hrs">—</span></div>
+        </div>
+        <div class="legend">
+          <div class="lt">Sun Hrs / Day</div>
+          <div class="li"><div class="lsw" style="background:#d4a24e"></div>6+ Full</div>
+          <div class="li"><div class="lsw" style="background:#a06828"></div>4–6 hrs</div>
+          <div class="li"><div class="lsw" style="background:#6a4018"></div>2–4 hrs</div>
+          <div class="li"><div class="lsw" style="background:#382010"></div>0.5–2 hrs</div>
+          <div class="li"><div class="lsw" style="background:#1a0e06"></div>&lt;0.5 hrs</div>
+        </div>
+      </div>
+
+      <!-- Plant panel -->
+      <div id="plant-panel" class="panel">
+        <div class="ctrl">
+          <div class="ch"><span class="cl" id="lbl-wk-date2">Week — Jun 27</span><span class="cv" id="lbl-week2">Wk 13</span></div>
+          <input type="range" id="sl-week2" min="0" max="25" step="1" value="12" oninput="onWeek(this.value)">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span class="lt" style="margin:0">Crops</span>
+          <span class="ptoggle" onclick="toggleAllPlants()">toggle all</span>
+        </div>
+        <div id="plant-list"></div>
+        <div id="plant-info"></div>
+      </div>
+
+      <!-- Trees panel -->
+      <div id="tree-panel" class="panel">
+        <div class="ctrl">
+          <div class="ch"><span class="cl" id="lbl-wk-date3">Week — Jun 27</span><span class="cv" id="lbl-week3">Wk 13</span></div>
+          <input type="range" id="sl-week3" min="0" max="25" step="1" value="12" oninput="onWeek(this.value)">
+        </div>
+        <div class="ctrl">
+          <div class="ch"><span class="cl">Time</span><span class="cv" id="lbl-time2">12:00 PM</span></div>
+          <input type="range" id="sl-time2" min="4.5" max="20.5" step="0.1" value="12" oninput="onTime(this.value)">
+        </div>
+        <div class="lt">Custom Trees</div>
+        <div id="tree-list" style="max-height:100px;overflow-y:auto;margin-bottom:6px;border:1px solid #21262d;border-radius:4px"></div>
+        <div class="tree-form">
+          <div class="lt" id="tree-form-title">Add Tree</div>
+          <div style="font-size:7px;color:#555;margin-bottom:4px">Tap map to set position · select tree to drag</div>
+          <label>E-W ft <input type="number" id="t-x" value="55" min="0" max="110"></label>
+          <label>N-S ft <input type="number" id="t-y" value="5" min="-20" max="50"></label>
+          <label>Height ft <input type="number" id="t-h" value="40" min="5" max="100"></label>
+          <label>Crown ft <input type="number" id="t-cr" value="15" min="2" max="50"></label>
+          <button class="tree-add-btn" id="tree-submit" onclick="addTree()">+ Add Tree</button>
+          <div style="display:flex;gap:4px;margin-top:4px">
+            <button class="mbtn" onclick="deselectTree()">Deselect</button>
+          </div>
+        </div>
+        <div style="margin-top:4px;font-size:7px;color:#444">Negative N-S = south of garden edge.</div>
+      </div>
+
+    </div><!-- /controls -->
+
+    <!-- Garden SVG canvas -->
+    <div id="main-area">
+      <div id="garden-wrap">
+        <svg id="garden-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="soilGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#5c3d20"/><stop offset="100%" stop-color="#2d1a08"/>
+            </linearGradient>
+            <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#252520"/><stop offset="100%" stop-color="#1a1a18"/>
+            </linearGradient>
+            <linearGradient id="treeGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#07180e"/><stop offset="100%" stop-color="#1a5028"/>
+            </linearGradient>
+            <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fffbc8" stop-opacity="1"/>
+              <stop offset="35%" stop-color="#ffd166" stop-opacity="0.5"/>
+              <stop offset="100%" stop-color="#ffd166" stop-opacity="0"/>
+            </radialGradient>
+            <clipPath id="gardenClip"><rect id="gardenClipRect" x="0" y="0" width="100" height="100"/></clipPath>
+          </defs>
+          <rect id="sky-bg" x="0" y="0" width="100%" height="100" fill="url(#skyGrad)"/>
+          <ellipse id="sun-arc" cx="50%" cy="50%" rx="45%" ry="30" fill="none" stroke="rgba(255,209,102,0.08)" stroke-width="1" stroke-dasharray="4 6"/>
+          <text id="lbl-east" x="95%" y="10" text-anchor="end" font-size="8" fill="#555" font-family="monospace">E</text>
+          <text id="lbl-west" x="2%" y="10" text-anchor="start" font-size="8" fill="#555" font-family="monospace">W</text>
+          <circle id="sun-glow" r="20" fill="url(#sunGlow)" opacity="0"/>
+          <circle id="sun-disc" r="7" fill="#fff9b0" opacity="0"/>
+          <circle id="sun-core" r="4.5" fill="#ffd166" opacity="0"/>
+          <g id="sun-rays" opacity="0"></g>
+          <rect id="tree-bg" x="0" y="0" width="100%" height="100" fill="url(#treeGrad)"/>
+          <g id="trees-decor"></g>
+          <text id="tree-label" x="50%" y="50%" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.18)" font-family="monospace">▲ SOUTH — TREE LINE ▲</text>
+          <rect id="garden-rect" x="0" y="0" width="100" height="100" fill="url(#soilGrad)"/>
+          <rect id="light-overlay" x="0" y="0" width="100" height="100" clip-path="url(#gardenClip)" opacity="0"/>
+          <g id="row-lines" stroke="#6b4020" stroke-width="0.8" opacity="0.5"></g>
+          <g id="col-lines" stroke="#6b4020" stroke-width="0.5" opacity="0.3"></g>
+          <g id="sun-cells" clip-path="url(#gardenClip)"></g>
+          <g id="plant-cells" clip-path="url(#gardenClip)"></g>
+          <g id="tree-shadows" clip-path="url(#gardenClip)"></g>
+          <g id="plant-labels" clip-path="url(#gardenClip)"></g>
+          <g id="tree-markers"></g>
+          <rect id="garden-border" x="0" y="0" width="100" height="100" fill="none" stroke="#ffd166" stroke-width="1.5" stroke-opacity="0.45" rx="2"/>
+          <g id="yaxis-labels"></g>
+          <line id="yaxis-line" x1="0" y1="0" x2="0" y2="0" stroke="#30363d" stroke-width="1"/>
+          <text id="lbl-north" x="50%" y="20" text-anchor="middle" font-size="9" fill="#7d8590" font-family="monospace">N ↑</text>
+          <text id="lbl-south" x="50%" y="20" text-anchor="middle" font-size="8" fill="#5a5a5a" font-family="monospace">S</text>
+          <text id="timestamp" x="6" y="20" font-size="9" fill="rgba(255,209,102,0.85)" font-family="monospace" font-weight="bold"></text>
+        </svg>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ── Full-screen overlay (Guide + Tasks) slides in from right ── -->
+  <div id="overlay">
+    <div id="overlay-topbar">
+      <span id="overlay-title">📋 Planting Guide</span>
+      <button id="overlay-back" onclick="closeOverlay()">← Back to Map</button>
+    </div>
+    <div id="overlay-tabs">
+      <button class="otab active" id="otab-guide"   onclick="switchOverlayTab('guide')">📋 Guide</button>
+      <button class="otab"        id="otab-actions" onclick="switchOverlayTab('actions')">📝 Tasks</button>
+      <button class="otab"        id="otab-plants"  onclick="switchOverlayTab('plants')">🌿 Plants</button>
+    </div>
+    <div id="overlay-body">
+      <div id="guide-content"></div>
+      <div id="actions-content" style="display:none"></div>
+      <div id="plants-content"  style="display:none"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+var LAT=42.82*Math.PI/180,LON=-83.26,TZ=-5,GW=110,GH=40,GC=20,GR=8;
+var BIWEEKLY=[];for(var i=0;i<26;i++)BIWEEKLY.push(7+i*14);
+var TF=0.13,SF=0.17,YAW=34;
+var S={timeH:12,weekIdx:12,mode:'live'};
+var animating=false,animDir=1,animFrame=null,lastTs=null;
+
+// ── Trees ──────────────────────────────────────────────────────────────────
+var customTrees=[],selectedTreeIdx=-1;
+try{var _s=localStorage.getItem('og_trees');if(_s)customTrees=JSON.parse(_s);}catch(e){}
+function saveTrees(){try{localStorage.setItem('og_trees',JSON.stringify(customTrees));}catch(e){}}
+
+// ── Plants ─────────────────────────────────────────────────────────────────
+var PLANTS=[
+  {id:'radish',  name:'Radishes',      cat:'root',  color:'#e85050',timing:'early',pd:82, hd:180,rows:[1,2,3]},
+  {id:'lettuce', name:'Lettuce',        cat:'veg',   color:'#7acc55',timing:'early',pd:82, hd:175,rows:[0,1,2]},
+  {id:'onion',   name:'Onions',         cat:'root',  color:'#c8a040',timing:'early',pd:82, hd:240,rows:[2,3,4]},
+  {id:'carrot',  name:'Carrots',        cat:'root',  color:'#e88030',timing:'early',pd:90, hd:230,rows:[2,3,4]},
+  {id:'potato',  name:'Potatoes',       cat:'root',  color:'#a08050',timing:'early',pd:105,hd:240,rows:[3,4,5]},
+  {id:'pontiac', name:'Pontiac Red',    cat:'root',  color:'#c04050',timing:'early',pd:105,hd:240,rows:[3,4,5]},
+  {id:'sunflower',name:'Sunflower',     cat:'flower',color:'#ffd040',timing:'mid',  pd:135,hd:280,rows:[7]},
+  {id:'nasturt', name:'Nasturtiums',    cat:'flower',color:'#ff8040',timing:'mid',  pd:135,hd:280,rows:[0,7]},
+  {id:'milkweed',name:'Milkweed',       cat:'flower',color:'#d080c0',timing:'early',pd:82, hd:300,rows:[7]},
+  {id:'bean',    name:'Beans',          cat:'veg',   color:'#50a850',timing:'mid',  pd:135,hd:260,rows:[4,5]},
+  {id:'corn',    name:'Corn',           cat:'veg',   color:'#c0a830',timing:'mid',  pd:135,hd:260,rows:[6,7]},
+  {id:'cucumber',name:'Cucumbers',      cat:'veg',   color:'#40a060',timing:'late', pd:140,hd:260,rows:[4,5]},
+  {id:'zucchini',name:'Zucchini',       cat:'squash',color:'#408040',timing:'late', pd:140,hd:260,rows:[3,4]},
+  {id:'sumSq',   name:'Summer Squash',  cat:'squash',color:'#d0b030',timing:'late', pd:140,hd:260,rows:[3,4]},
+  {id:'buttern', name:'Butternut',      cat:'squash',color:'#c08840',timing:'late', pd:140,hd:275,rows:[5,6]},
+  {id:'winSq',   name:'Winter Squash',  cat:'squash',color:'#708040',timing:'late', pd:140,hd:275,rows:[5,6]},
+  {id:'pumpkin', name:'Pumpkin',        cat:'squash',color:'#e08020',timing:'late', pd:140,hd:280,rows:[6,7]},
+  {id:'tomato',  name:'Tomatoes',       cat:'fruit', color:'#e03030',timing:'late', pd:135,hd:275,rows:[6,7]},
+  {id:'bellP',   name:'Bell Peppers',   cat:'fruit', color:'#30a030',timing:'late', pd:140,hd:270,rows:[5,6]},
+  {id:'sweetP',  name:'Sweet Peppers',  cat:'fruit', color:'#e0c020',timing:'late', pd:140,hd:270,rows:[5,6]},
+  {id:'hotP',    name:'Hot Peppers',    cat:'fruit', color:'#d02020',timing:'late', pd:140,hd:270,rows:[5,6]}
+];
+(function(){
+  var g=[];for(var r=0;r<GR;r++){g[r]=[];for(var c=0;c<GC;c++)g[r][c]=null;}
+  PLANTS.forEach(function(p){
+    p.cells=[];
+    var cn=(p.cat==='squash'||p.id==='corn'||p.id==='pumpkin')?4:(p.cat==='flower'||p.cat==='fruit')?3:2;
+    var pl=0;
+    for(var ri=0;ri<p.rows.length&&pl<cn;ri++){
+      var row=p.rows[ri];
+      for(var c=0;c<GC&&pl<cn;c++){if(g[row][c]===null){g[row][c]=p.id;p.cells.push({r:row,c:c});pl++;}}
+    }
+  });
+})();
+var plantOn={};PLANTS.forEach(function(p){plantOn[p.id]=true;});
+
+// ── Solar math ─────────────────────────────────────────────────────────────
+function sunPos(doy,h){
+  var B=(360/365)*(doy-81)*Math.PI/180;
+  var EoT=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
+  var decl=23.45*Math.sin(B)*Math.PI/180;
+  var sm=h*60+EoT+4*(LON-TZ*15);var ha=(sm/4-180)*Math.PI/180;
+  var sinA=Math.sin(LAT)*Math.sin(decl)+Math.cos(LAT)*Math.cos(decl)*Math.cos(ha);
+  var alt=Math.asin(Math.max(-1,Math.min(1,sinA)));
+  var cosZ=(Math.sin(decl)-Math.sin(LAT)*sinA)/(Math.cos(LAT)*Math.cos(alt));
+  var az=Math.acos(Math.max(-1,Math.min(1,cosZ)))*180/Math.PI;
+  if(ha>0)az=360-az;
+  return{alt:alt*180/Math.PI,az:az};
+}
+function cellInShadow(cx,cy,alt,az){
+  if(alt<=0.5)return false;
+  for(var i=0;i<customTrees.length;i++){
+    var ct=customTrees[i];
+    var aR=alt*Math.PI/180,len=ct.h/Math.tan(aR);
+    // Shadow direction = opposite of sun azimuth (az+180)
+    // Garden coords: +X=East, +Y=North (standard math)
+    var saz=((az+180)%360)*Math.PI/180;
+    var dx=len*Math.sin(saz),dy=len*Math.cos(saz);
+    var tx=ct.x,ty=ct.y,sx=tx+dx,sy=ty+dy,cr=ct.cr/2;
+    var segL=(sx-tx)*(sx-tx)+(sy-ty)*(sy-ty);if(segL<1)continue;
+    var t=Math.max(0,Math.min(1,((cx-tx)*(sx-tx)+(cy-ty)*(sy-ty))/segL));
+    var px=tx+(sx-tx)*t,py=ty+(sy-ty)*t;
+    if(Math.sqrt((cx-px)*(cx-px)+(cy-py)*(cy-py))<=cr*(1-t*0.5))return true;
+  }
+  return false;
+}
+function computeMap(doy){
+  var map=[];for(var r=0;r<GR;r++){map[r]=[];for(var c=0;c<GC;c++)map[r][c]=0;}
+  for(var t=5;t<=20;t+=0.25){
+    var p=sunPos(doy,t);if(p.alt<=0)continue;
+    for(var r2=0;r2<GR;r2++)for(var c2=0;c2<GC;c2++){
+      var cx=(c2+0.5)*(GW/GC),cy=(r2+0.5)*(GH/GR);
+      if(!cellInShadow(cx,cy,p.alt,p.az))map[r2][c2]+=0.25;
+    }
+  }
+  return map;
+}
+function centerHrs(doy){
+  var h=0,cx=GW/2,cy=GH/2;
+  for(var t=5;t<=20;t+=0.25){var p=sunPos(doy,t);if(p.alt<=0)continue;if(!cellInShadow(cx,cy,p.alt,p.az))h+=0.25;}
+  return h.toFixed(1);
+}
+function hrsColor(h){return h>=6?'#d4a24e':h>=4?'#a06828':h>=2?'#6a4018':h>=0.5?'#382010':'#1a0e06';}
+function fmtTime(h){var hh=Math.floor(h),mm=Math.round((h%1)*60);return(hh>12?hh-12:hh===0?12:hh)+':'+('0'+mm).slice(-2)+' '+(hh>=12?'PM':'AM');}
+function doyLabel(d){return new Date(2024,0,d).toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function season(d){return d<80||d>=355?{t:'Winter ❄️',c:'#7ec8e3'}:d<172?{t:'Spring 🌱',c:'#6bcb77'}:d<264?{t:'Summer ☀️',c:'#ffd166'}:{t:'Autumn 🍂',c:'#f4a261'};}
+
+// ── DOM helpers ────────────────────────────────────────────────────────────
+var $=function(id){return document.getElementById(id);};
+function svgE(tag,a){var el=document.createElementNS('http://www.w3.org/2000/svg',tag);for(var k in a)if(a.hasOwnProperty(k))el.setAttribute(k,a[k]);return el;}
+
+// ── Layout ─────────────────────────────────────────────────────────────────
+function layout(){
+  var w=$('garden-wrap'),W=w.clientWidth,H=w.clientHeight;
+  var skyH=Math.round(H*SF),treeH=Math.round(H*TF),gardenH=H-skyH-treeH;
+  return{W:W,H:H,skyH:skyH,gardenH:gardenH,gardenW:W-YAW,gX:0,gY:0,treeH:treeH,treeY:gardenH,skyY:gardenH+treeH};
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render(){
+  var L=layout(),doy=BIWEEKLY[S.weekIdx],pos=sunPos(doy,S.timeH);
+  var seas=season(doy),sunHrs=centerHrs(doy),ftPx=L.gardenH/GH;
+  var b=$('season-badge');b.textContent=seas.t;b.style.color=seas.c;b.style.borderColor=seas.c+'55';b.style.background=seas.c+'18';
+  var svg=$('garden-svg');svg.setAttribute('viewBox','0 0 '+L.W+' '+L.H);
+  svg.setAttribute('width',L.W);svg.setAttribute('height',L.H);
+  var gr=$('garden-rect');gr.setAttribute('x',L.gX);gr.setAttribute('y',L.gY);gr.setAttribute('width',L.gardenW);gr.setAttribute('height',L.gardenH);
+  $('gardenClipRect').setAttribute('x',L.gX);$('gardenClipRect').setAttribute('y',L.gY);$('gardenClipRect').setAttribute('width',L.gardenW);$('gardenClipRect').setAttribute('height',L.gardenH);
+  var gb=$('garden-border');gb.setAttribute('x',L.gX);gb.setAttribute('y',L.gY);gb.setAttribute('width',L.gardenW);gb.setAttribute('height',L.gardenH);
+  $('tree-bg').setAttribute('y',L.treeY);$('tree-bg').setAttribute('height',L.treeH);$('tree-bg').setAttribute('width',L.W);
+  $('tree-label').setAttribute('y',L.treeY+L.treeH*0.6);$('tree-label').setAttribute('x',L.W*0.5);
+  var td=$('trees-decor');td.innerHTML='';
+  var nT=Math.floor(L.W/20);
+  for(var i=0;i<nT;i++){
+    var tx=8+i*(L.W/nT),th=L.treeH*0.65+Math.sin(i*1.7)*L.treeH*0.12,tw=L.treeH*0.3+Math.sin(i*2.3)*3;
+    td.appendChild(svgE('polygon',{points:tx+','+(L.treeY+1)+' '+(tx-tw/2)+','+(L.treeY+L.treeH)+' '+(tx+tw/2)+','+(L.treeY+L.treeH),fill:'#0e4020',opacity:'0.85'}));
+  }
+  $('sky-bg').setAttribute('y',L.skyY);$('sky-bg').setAttribute('height',L.skyH);
+  var arc=$('sun-arc');arc.setAttribute('cx',L.gX+L.gardenW/2);arc.setAttribute('cy',L.skyY);arc.setAttribute('rx',L.gardenW*0.44);arc.setAttribute('ry',L.skyH*0.75);
+  $('lbl-east').setAttribute('x',L.gX+L.gardenW-6);$('lbl-east').setAttribute('y',L.skyY+10);
+  $('lbl-west').setAttribute('x',L.gX+6);$('lbl-west').setAttribute('y',L.skyY+10);
+  var sunVis=pos.alt>1;
+  var tN=1-Math.max(0,Math.min(1,(pos.az-70)/(290-70)));
+  var sunX=L.gX+tN*L.gardenW,sunY=Math.min(L.skyY+6+(pos.alt/75)*(L.skyH-14),L.skyY+L.skyH-8);
+  ['sun-glow','sun-disc','sun-core','sun-rays'].forEach(function(id){$(id).setAttribute('opacity',sunVis?'1':'0');});
+  if(sunVis){
+    $('sun-glow').setAttribute('cx',sunX);$('sun-glow').setAttribute('cy',sunY);
+    $('sun-disc').setAttribute('cx',sunX);$('sun-disc').setAttribute('cy',sunY);
+    $('sun-core').setAttribute('cx',sunX);$('sun-core').setAttribute('cy',sunY);
+    var rg=$('sun-rays');rg.innerHTML='';
+    [0,45,90,135,180,225,270,315].forEach(function(a){
+      var ar=a*Math.PI/180;
+      rg.appendChild(svgE('line',{x1:sunX+Math.cos(ar)*9,y1:sunY+Math.sin(ar)*9,x2:sunX+Math.cos(ar)*15,y2:sunY+Math.sin(ar)*15,stroke:'#ffd166','stroke-width':'1','stroke-opacity':'0.45'}));
+    });
+    $('altaz').textContent='☀ '+pos.alt.toFixed(1)+'° alt · '+pos.az.toFixed(0)+'° az';
+  }else{$('altaz').textContent='☀ Below horizon';}
+  var lo=$('light-overlay');lo.setAttribute('x',L.gX);lo.setAttribute('y',L.gY);lo.setAttribute('width',L.gardenW);lo.setAttribute('height',L.gardenH);
+  if(S.mode==='live'||S.mode==='trees'){
+    if(pos.alt>10){lo.setAttribute('fill','rgba(212,162,78,'+Math.min(0.14,pos.alt/260)+')');lo.setAttribute('opacity','1');}
+    else if(pos.alt>0){lo.setAttribute('fill','#111008');lo.setAttribute('opacity',String((1-pos.alt/10)*0.6));}
+    else{lo.setAttribute('fill','#0a0a08');lo.setAttribute('opacity','0.8');}
+  }else{lo.setAttribute('opacity','0');}
+  var rlg=$('row-lines');rlg.innerHTML='';
+  for(var i2=1;i2<GR;i2++){var y2=L.gY+i2*(L.gardenH/GR);rlg.appendChild(svgE('line',{x1:L.gX,y1:y2,x2:L.gX+L.gardenW,y2:y2}));}
+  var clg=$('col-lines');clg.innerHTML='';
+  for(var i3=1;i3<GC;i3++){var x3=L.gX+i3*(L.gardenW/GC);clg.appendChild(svgE('line',{x1:x3,y1:L.gY,x2:x3,y2:L.gY+L.gardenH}));}
+  $('lbl-north').setAttribute('x',L.gX+L.gardenW/2);$('lbl-north').setAttribute('y',L.gY+11);
+  $('lbl-south').setAttribute('x',L.gX+L.gardenW/2);$('lbl-south').setAttribute('y',L.gY+L.gardenH-3);
+  $('timestamp').setAttribute('x',6);$('timestamp').setAttribute('y',L.gY+L.gardenH-14);
+  $('timestamp').textContent=fmtTime(S.timeH)+' · '+doyLabel(doy);
+  var yg=$('yaxis-labels');yg.innerHTML='';var axX=L.gX+L.gardenW+2;
+  $('yaxis-line').setAttribute('x1',axX);$('yaxis-line').setAttribute('y1',L.gY);$('yaxis-line').setAttribute('x2',axX);$('yaxis-line').setAttribute('y2',L.gY+L.gardenH);
+  for(var ft=0;ft<=GH;ft+=10){
+    var yy=L.gY+L.gardenH-ft*ftPx;
+    yg.appendChild(svgE('line',{x1:axX,y1:yy,x2:axX+4,y2:yy,stroke:'#555','stroke-width':'1'}));
+    var tt=svgE('text',{x:axX+5,y:yy+3,'font-size':'7',fill:'#7d8590','font-family':'monospace'});tt.textContent=ft+'ft';yg.appendChild(tt);
+  }
+  var tm=$('tree-markers');tm.innerHTML='';var ts=$('tree-shadows');ts.innerHTML='';
+  var cw=L.gardenW/GC,ch=L.gardenH/GR;
+  customTrees.forEach(function(ct,idx){
+    var px=L.gX+(ct.x/GW)*L.gardenW;
+    var py=ct.y>=0?L.gY+L.gardenH-(ct.y/GH)*L.gardenH:L.gY+L.gardenH+(-ct.y/GH)*L.gardenH;
+    var crPx=(ct.cr/2/GW)*L.gardenW;
+    if(pos.alt>0.5){
+      var aR=pos.alt*Math.PI/180,len=ct.h/Math.tan(aR);
+      var saz=((pos.az+180)%360)*Math.PI/180;
+      var dx=len*Math.sin(saz),dy=len*Math.cos(saz);
+      var tipPx=L.gX+((ct.x+dx)/GW)*L.gardenW,tipPy=L.gY+L.gardenH-((ct.y+dy)/GH)*L.gardenH;
+      var midX=(px+tipPx)/2,midY=(py+tipPy)/2;
+      var sLen=Math.sqrt((tipPx-px)*(tipPx-px)+(tipPy-py)*(tipPy-py));
+      var angle=Math.atan2(tipPy-py,tipPx-px)*180/Math.PI;
+      ts.appendChild(svgE('ellipse',{cx:midX,cy:midY,rx:sLen/2,ry:crPx*0.7,fill:'rgba(10,10,5,0.35)',transform:'rotate('+angle+','+midX+','+midY+')'}));
+    }
+    var isSel=(idx===selectedTreeIdx);
+    tm.appendChild(svgE('circle',{cx:px,cy:py,r:crPx,fill:isSel?'rgba(255,209,102,0.3)':'rgba(20,80,30,0.45)',stroke:isSel?'#ffd166':'#2a8040','stroke-width':isSel?'2':'1.5'}));
+    tm.appendChild(svgE('circle',{cx:px,cy:py,r:3,fill:'#4a3020'}));
+    var lbl=svgE('text',{x:px,y:py-crPx-3,'font-size':'7',fill:isSel?'#ffd166':'#6bcb77','font-family':'monospace','text-anchor':'middle'});
+    lbl.textContent=ct.h+'ft';tm.appendChild(lbl);
+  });
+  var sunCells=$('sun-cells'),plantCells=$('plant-cells'),plantLabels=$('plant-labels');
+  sunCells.innerHTML='';plantCells.innerHTML='';plantLabels.innerHTML='';
+  if(S.mode==='daily'||S.mode==='plant'){
+    var map=computeMap(doy);var opac=S.mode==='daily'?'0.9':'0.3';
+    for(var r=0;r<GR;r++)for(var c=0;c<GC;c++){
+      var px2=L.gX+c*cw,py2=L.gY+L.gardenH-(r+1)*ch;
+      sunCells.appendChild(svgE('rect',{x:px2+1,y:py2+1,width:cw-2,height:ch-2,fill:hrsColor(map[r][c]),rx:'2',opacity:opac}));
+    }
+  }
+  if(S.mode==='plant'){
+    var lblQ=[];
+    allActivePlants().forEach(function(p){
+      if(plantOn[p.id]===false)return;
+      var st=doy>=p.pd&&doy<=p.hd?'active':doy>p.hd?'done':'dormant';
+      var isPW=(doy>=p.pd-14&&doy<=p.pd+14);
+      var rMap={};p.cells.forEach(function(cell){if(!rMap[cell.r])rMap[cell.r]=[];rMap[cell.r].push(cell.c);});
+      p.cells.forEach(function(cell){
+        var cx2=L.gX+cell.c*cw,cy2=L.gY+L.gardenH-(cell.r+1)*ch;
+        var fo=st==='dormant'?'0.15':st==='done'?'0.1':'0.75';
+        var sc=st==='dormant'?'#555':st==='done'?'#333':isPW?'#fff':p.color;
+        var sw=st==='dormant'?'0.5':isPW?'2':'1.5';
+        plantCells.appendChild(svgE('rect',{x:cx2+1,y:cy2+1,width:cw-2,height:ch-2,fill:p.color,opacity:fo,stroke:sc,'stroke-width':sw,rx:'2'}));
+      });
+      if(st!=='dormant'){
+        var fr=p.cells[0].r;var cols=rMap[fr];cols.sort(function(a,b){return a-b;});
+        var lx=L.gX+cols[0]*cw,lw=(cols[cols.length-1]-cols[0]+1)*cw;
+        lblQ.push({name:p.name,x:lx+lw/2,y:L.gY+L.gardenH-(fr+1)*ch+ch/2+3,mw:lw-4});
+      }
+    });
+    lblQ.forEach(function(l){
+      var ew=l.name.length*5+6,pw=Math.min(ew,l.mw);
+      plantLabels.appendChild(svgE('rect',{x:l.x-pw/2,y:l.y-7,width:pw,height:11,fill:'#000',opacity:'0.6',rx:'3'}));
+      var t2=svgE('text',{x:l.x,y:l.y,'font-size':'7',fill:'#fff','font-family':'monospace','text-anchor':'middle','font-weight':'bold','pointer-events':'none'});
+      t2.textContent=l.name;plantLabels.appendChild(t2);
+    });
+    var inf=$('plant-info');
+    var pN=allActivePlants().filter(function(p){return plantOn[p.id]!==false&&doy>=p.pd-14&&doy<=p.pd+14;});
+    var gr2=allActivePlants().filter(function(p){return plantOn[p.id]!==false&&doy>=p.pd&&doy<=p.hd;});
+    inf.innerHTML='<strong>'+doyLabel(doy)+'</strong><br>'+(pN.length?'🌱 Plant now: '+pN.map(function(p){return p.name;}).join(', ')+'<br>':'')+'🌿 Growing: '+gr2.length;
+  }
+  $('st-alt').textContent=pos.alt>0?pos.alt.toFixed(1)+'°':'Below';
+  $('st-az').textContent=pos.alt>0?pos.az.toFixed(1)+'°':'—';
+  $('st-hrs').textContent=sunHrs+' hrs';
+}
+
+// ── Mode switching ─────────────────────────────────────────────────────────
+function setMode(m){
+  S.mode=m;
+  ['live','daily','plant','trees'].forEach(function(id){$('btn-'+id).classList.toggle('active',m===id);});
+  ['guide','actions'].forEach(function(id){$('btn-'+id).classList.remove('active');});
+  $('solar-panel').classList.toggle('vis',m==='live'||m==='daily');
+  $('plant-panel').classList.toggle('vis',m==='plant');
+  $('tree-panel').classList.toggle('vis',m==='trees');
+  render();
+}
+function onTime(v){
+  S.timeH=parseFloat(v);
+  $('lbl-time').textContent=fmtTime(S.timeH);$('lbl-time2').textContent=fmtTime(S.timeH);
+  $('sl-time').value=S.timeH;$('sl-time2').value=S.timeH;
+  render();
+}
+function onWeek(v){
+  S.weekIdx=parseInt(v);var d=BIWEEKLY[S.weekIdx];
+  var l='Wk '+(S.weekIdx*2+1),dt='Week — '+doyLabel(d);
+  $('lbl-week').textContent=l;$('lbl-wk-date').textContent=dt;
+  $('lbl-week2').textContent=l;$('lbl-wk-date2').textContent=dt;
+  $('lbl-week3').textContent=l;$('lbl-wk-date3').textContent=dt;
+  $('sl-week').value=S.weekIdx;$('sl-week2').value=S.weekIdx;$('sl-week3').value=S.weekIdx;
+  render();
+}
+function toggleAnim(){
+  animating=!animating;
+  $('anim-btn').textContent=animating?'⏸ Pause':'▶ Animate Day';
+  $('anim-btn').classList.toggle('active',animating);
+  if(animating){lastTs=null;animFrame=requestAnimationFrame(anim);}else cancelAnimationFrame(animFrame);
+}
+function anim(ts){
+  if(!animating)return;
+  if(lastTs!==null){
+    var dt=(ts-lastTs)/1000;S.timeH+=dt*2.5*animDir;
+    if(S.timeH>=20.5){S.timeH=20.5;animDir=-1;}if(S.timeH<=4.5){S.timeH=4.5;animDir=1;}
+    $('sl-time').value=S.timeH;$('lbl-time').textContent=fmtTime(S.timeH);render();
+  }
+  lastTs=ts;animFrame=requestAnimationFrame(anim);
+}
+
+// ── Plant list (sidebar) ───────────────────────────────────────────────────
+function buildPlantList(){
+  var c=$('plant-list');c.innerHTML='';
+  var cats=['root','veg','flower','squash','fruit','herb','other'];
+  var cn={root:'Roots',veg:'Vegetables',flower:'Flowers',squash:'Squash',fruit:'Fruiting',herb:'Herbs',other:'Other'};
+  cats.forEach(function(cat){
+    var items=allActivePlants().filter(function(p){return p.cat===cat;});if(!items.length)return;
+    var t=document.createElement('div');t.className='psec';t.textContent=cn[cat]||cat;c.appendChild(t);
+    items.forEach(function(p){
+      var r=document.createElement('label');r.className='prow';
+      r.innerHTML='<input type="checkbox"'+(plantOn[p.id]!==false?' checked':'')+' data-pid="'+p.id+'" onchange="togglePlant(this)"><div class="pdot" style="background:'+p.color+'"></div><span class="pname">'+p.name+'</span><span class="ptag pt-'+p.timing+'">'+p.timing+'</span>';
+      c.appendChild(r);
+    });
+  });
+}
+function togglePlant(cb){plantOn[cb.dataset.pid]=cb.checked;render();}
+function toggleAllPlants(){
+  var all=allActivePlants();
+  var any=all.some(function(p){return plantOn[p.id]!==false;});var ns=!any;
+  all.forEach(function(p){plantOn[p.id]=ns;});
+  document.querySelectorAll('#plant-list input[type=checkbox]').forEach(function(cb){cb.checked=ns;});
+  render();
+}
+
+// ── Trees ──────────────────────────────────────────────────────────────────
+function renderTreeList(){
+  var c=$('tree-list');c.innerHTML='';
+  if(!customTrees.length){
+    c.innerHTML='<div style="font-size:8px;color:#444;padding:6px;text-align:center">No trees yet — tap map to place</div>';
+    return;
+  }
+  customTrees.forEach(function(ct,idx){
+    var d=document.createElement('div');
+    d.className='tree-item'+(idx===selectedTreeIdx?' selected':'');
+    d.onclick=function(){selectTree(idx);};
+    d.innerHTML='🌳 <b>'+ct.h+'ft</b> h · <b>'+ct.cr+'ft</b> crown<br>'
+      +'<span style="font-size:7px;color:#666">E-W: '+ct.x+'  N-S: '+ct.y+'</span>'
+      +'<button class="tdel" onclick="event.stopPropagation();delTree('+idx+')">✕</button>';
+    c.appendChild(d);
+  });
+}
+function selectTree(idx){
+  selectedTreeIdx=idx;var ct=customTrees[idx];
+  $('t-x').value=ct.x;$('t-y').value=ct.y;$('t-h').value=ct.h;$('t-cr').value=ct.cr;
+  $('tree-form-title').textContent='Edit Tree';$('tree-submit').textContent='✓ Update Tree';
+  renderTreeList();render();
+}
+function deselectTree(){
+  selectedTreeIdx=-1;
+  $('tree-form-title').textContent='Add Tree';$('tree-submit').textContent='+ Add Tree';
+  renderTreeList();render();
+}
+function addTree(){
+  var x=parseInt($('t-x').value)||55,y=parseInt($('t-y').value)||5,h=parseInt($('t-h').value)||40,cr=parseInt($('t-cr').value)||15;
+  if(selectedTreeIdx>-1){customTrees[selectedTreeIdx]={x:x,y:y,h:h,cr:cr};}
+  else{customTrees.push({x:x,y:y,h:h,cr:cr});}
+  saveTrees();deselectTree();
+}
+function delTree(idx){
+  customTrees.splice(idx,1);
+  if(selectedTreeIdx===idx){selectedTreeIdx=-1;$('tree-form-title').textContent='Add Tree';$('tree-submit').textContent='+ Add Tree';}
+  else if(selectedTreeIdx>idx){selectedTreeIdx--;}
+  saveTrees();renderTreeList();render();
+}
+$('garden-svg').addEventListener('pointerdown',function(e){
+  if(S.mode!=='trees')return;
+  var L=layout(),rect=$('garden-svg').getBoundingClientRect();
+  var mx=(e.clientX-rect.left)*(L.W/rect.width),my=(e.clientY-rect.top)*(L.H/rect.height);
+  var gx=Math.round(((mx-L.gX)/L.gardenW)*GW);
+  var gy=Math.round(((L.gY+L.gardenH-my)/L.gardenH)*GH);
+  $('t-x').value=gx;$('t-y').value=gy;
+  if(selectedTreeIdx>-1){
+    customTrees[selectedTreeIdx].x=gx;customTrees[selectedTreeIdx].y=gy;
+    saveTrees();renderTreeList();render();
+  }
+});
+
+// ── Overlay (Guide + Tasks + Plants) ──────────────────────────────────────
+var overlayTab='guide';
+function openOverlay(tab){
+  $('overlay').classList.add('open');
+  ['live','daily','plant','trees'].forEach(function(id){$('btn-'+id).classList.remove('active');});
+  ['guide','actions','plants'].forEach(function(id){
+    if($('btn-'+id))$('btn-'+id).classList.toggle('active',id===tab);
+  });
+  switchOverlayTab(tab);
+}
+function closeOverlay(){
+  $('overlay').classList.remove('open');
+  $('btn-'+S.mode).classList.add('active');
+  ['guide','actions','plants'].forEach(function(id){if($('btn-'+id))$('btn-'+id).classList.remove('active');});
+}
+function switchOverlayTab(tab){
+  overlayTab=tab;
+  ['guide','actions','plants'].forEach(function(t){
+    $('otab-'+t).classList.toggle('active',t===tab);
+    $(t+'-content').style.display=t===tab?'block':'none';
+  });
+  var titles={guide:'📋 Planting Guide',actions:'📝 Garden Tasks',plants:'🌿 Manage Plants'};
+  $('overlay-title').textContent=titles[tab]||'';
+  if(tab==='guide')buildGuide();
+  if(tab==='actions')buildActions();
+  if(tab==='plants')buildPlantManager();
+}
+
+// ── Planting Guide ─────────────────────────────────────────────────────────
+var GP=[
+  {n:'Radishes',     c:'root',  t:'early',tl:'Early Spring',    m:'Direct sow',         s:'Loose, pH 6–7',          sun:'Full 6+',    cp:'Carrots, Lettuce'},
+  {n:'Lettuce',      c:'veg',   t:'early',tl:'Early Spring',    m:'Direct/transplant',  s:'Rich, moist, pH 6–7',    sun:'Part shade',  cp:'Radishes, Carrots'},
+  {n:'Onions',       c:'root',  t:'early',tl:'Early Spring',    m:'Sets',               s:'Loose, pH 6–7',          sun:'Full 6–8',   cp:'Carrots, Lettuce'},
+  {n:'Carrots',      c:'root',  t:'early',tl:'Early–Mid Spring',m:'Direct sow',         s:'Deep, loose, pH 6–6.8',  sun:'Full 6+',    cp:'Onions, Radishes'},
+  {n:'Potatoes',     c:'root',  t:'early',tl:'Early–Mid Spring',m:'Seed potatoes',      s:'Loose, pH 5–6',          sun:'Full 6–8',   cp:'Beans'},
+  {n:'Pontiac Red',  c:'root',  t:'early',tl:'Early–Mid Spring',m:'Seed potatoes',      s:'Loose, pH 5–6',          sun:'Full 6–8',   cp:'Beans'},
+  {n:'Sunflower',    c:'flower',t:'mid',  tl:'After Frost',     m:'Direct sow',         s:'Well-drained, pH 6–7.5', sun:'Full 6–8+',  cp:'Cucumbers, Corn'},
+  {n:'Nasturtiums',  c:'flower',t:'mid',  tl:'After Frost',     m:'Direct sow',         s:'Poor–avg, pH 6–7',       sun:'Full',       cp:'Tomatoes, Squash'},
+  {n:'Milkweed',     c:'flower',t:'early',tl:'Early Spring',    m:'Direct sow',         s:'Well-drained',           sun:'Full',       cp:'Sunflowers'},
+  {n:'Beans',        c:'veg',   t:'mid',  tl:'After Frost',     m:'Direct sow',         s:'Average, pH 6–7',        sun:'Full 6+',    cp:'Corn, Squash'},
+  {n:'Corn',         c:'veg',   t:'mid',  tl:'After Frost',     m:'Direct sow (blocks)',s:'Deep, fertile',          sun:'Full 8+',    cp:'Beans, Squash'},
+  {n:'Cucumbers',    c:'veg',   t:'late', tl:'Warm Soil',       m:'Direct/transplant',  s:'Rich, pH 6–7',           sun:'Full 6–8',   cp:'Beans, Corn'},
+  {n:'Zucchini',     c:'squash',t:'late', tl:'After Frost',     m:'Direct/transplant',  s:'Rich, pH 6–7.5',         sun:'Full 6–8',   cp:'Nasturtiums'},
+  {n:'Summer Squash',c:'squash',t:'late', tl:'After Frost',     m:'Direct/transplant',  s:'Rich, pH 6–7.5',         sun:'Full 6–8',   cp:'Nasturtiums'},
+  {n:'Butternut',    c:'squash',t:'late', tl:'After Frost',     m:'Transplant/direct',  s:'Rich, pH 6–6.8',         sun:'Full 8+',    cp:'Corn, Beans'},
+  {n:'Winter Squash',c:'squash',t:'late', tl:'After Frost',     m:'Transplant/direct',  s:'Rich, pH 6–6.8',         sun:'Full 6–8+',  cp:'Corn'},
+  {n:'Pumpkin',      c:'squash',t:'late', tl:'After Frost',     m:'Transplant/direct',  s:'Rich, pH 6–6.8',         sun:'Full 8+',    cp:'Corn'},
+  {n:'Tomatoes',     c:'fruit', t:'late', tl:'After Frost',     m:'Transplant only',    s:'Rich, pH 6–6.8',         sun:'Full 8+',    cp:'Peppers, Basil'},
+  {n:'Bell Peppers', c:'fruit', t:'late', tl:'Warm Soil',       m:'Transplant only',    s:'Rich, pH 6–6.8',         sun:'Full 6–8',   cp:'Tomatoes, Basil'},
+  {n:'Sweet Peppers',c:'fruit', t:'late', tl:'Warm Soil',       m:'Transplant only',    s:'Rich, pH 6–6.8',         sun:'Full 6–8',   cp:'Tomatoes'},
+  {n:'Hot Peppers',  c:'fruit', t:'late', tl:'Warm Soil',       m:'Transplant only',    s:'Well-drained',           sun:'Full 6–8+',  cp:'Tomatoes, Oregano'}
+];
+var gF='all';
+function allGuideEntries(){
+  // Merge built-in GP entries with custom plant guide rows
+  var entries=GP.slice();
+  customPlants.forEach(function(cp){
+    entries.push({
+      n:cp.name, c:cp.cat, t:cp.timing,
+      tl:cp.timingLabel||cp.timing, m:cp.method||'—',
+      s:cp.soil||'—', sun:cp.sun||'—', cp:cp.companions||'—',
+      custom:true, id:cp.id
+    });
+  });
+  return entries;
+}
+function buildGuide(){
+  var labels={all:'All',early:'🌱 Early Spring',mid:'☀ After Frost',late:'🍅 Warm Season'};
+  var h='<div class="g-filter">';
+  ['all','early','mid','late'].forEach(function(f){h+='<button class="g-fbtn'+(gF===f?' act':'')+'" onclick="gFilt(\''+f+'\')">'+labels[f]+'</button>';});
+  h+='</div><div class="gtw"><table class="guide-table"><thead><tr><th>Plant</th><th>Timing</th><th>Method</th><th>Soil</th><th>Sun</th><th>Companions</th></tr></thead><tbody>';
+  allGuideEntries().forEach(function(p){
+    if(gF!=='all'&&p.t!==gF)return;
+    var customMark=p.custom?'<span style="font-size:7px;color:#4a8a4a;margin-left:4px">★ custom</span>':'';
+    h+='<tr><td><div class="g-name">'+p.n+customMark+'</div><span class="g-badge g-'+p.c+'">'+p.c+'</span></td>';
+    h+='<td><span class="g-timing g-'+p.t+'">'+p.tl+'</span></td>';
+    h+='<td>'+p.m+'</td><td style="font-size:9px;color:#888;min-width:140px">'+p.s+'</td><td style="white-space:nowrap;color:#aaa">'+p.sun+'</td><td style="font-size:9px;color:#888">'+p.cp+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  $('guide-content').innerHTML=h;
+}
+function gFilt(f){gF=f;buildGuide();}
+
+// ── Tasks ──────────────────────────────────────────────────────────────────
+var DT=[
+  {id:'d1', month:2, title:'Test and amend soil',          desc:'MSU Extension soil test. Amend pH and nutrients. Add 2–4" compost.',                           priority:'high',done:false,custom:false},
+  {id:'d2', month:2, title:'Plan crop layout',             desc:'Decide beds for each crop. Use solar map for sun exposure. Assign companion groups.',            priority:'high',done:false,custom:false},
+  {id:'d3', month:2, title:'Order seeds & seed potatoes',  desc:'Radishes, lettuce, carrots, onion sets, Pontiac Red, beans, corn, squash, flowers.',            priority:'med', done:false,custom:false},
+  {id:'d4', month:3, title:'Start transplants indoors',    desc:'Tomatoes, peppers 8–10 wks before last frost (~May 12). Butternut 3–4 wks before.',             priority:'high',done:false,custom:false},
+  {id:'d5', month:3, title:'Prep garden beds',             desc:'Remove debris, turn soil, add compost. Set up trellises or stakes.',                             priority:'med', done:false,custom:false},
+  {id:'d6', month:3, title:'Direct sow early crops',       desc:'Radishes, lettuce, onion sets, carrots — 4–6 weeks before last frost (late Mar–mid Apr).',      priority:'high',done:false,custom:false},
+  {id:'d8', month:4, title:'Plant potatoes',               desc:'2–4 wks before last frost. Pontiac Red and standard varieties.',                                 priority:'high',done:false,custom:false},
+  {id:'d11',month:4, title:'Transplant after frost',       desc:'Tomatoes, peppers, squash after May 12 (last frost Oxford MI).',                                 priority:'high',done:false,custom:false},
+  {id:'d12',month:4, title:'Direct sow warm-season crops', desc:'Beans, corn (blocks), cucumbers, zucchini, squash, sunflowers — soil ≥60°F.',                   priority:'high',done:false,custom:false},
+  {id:'d13',month:4, title:'Sow milkweed',                 desc:'Direct sow stratified milkweed in pollinator border.',                                           priority:'low', done:false,custom:false},
+  {id:'d14',month:5, title:'Mulch all beds',               desc:'2–3 inches straw or wood chips. Retains moisture, suppresses weeds.',                            priority:'med', done:false,custom:false},
+  {id:'d15',month:5, title:'Side-dress corn with nitrogen',desc:'When corn reaches knee height, apply nitrogen fertilizer along row sides.',                       priority:'med', done:false,custom:false},
+  {id:'d17',month:5, title:'Train and prune tomatoes',     desc:'Remove suckers below first fruit cluster. Tie to stakes/cages.',                                 priority:'med', done:false,custom:false},
+  {id:'d18',month:6, title:'Monitor for pests',            desc:'Check for squash bugs, cucumber beetles, tomato hornworms, aphids. Neem oil if needed.',         priority:'med', done:false,custom:false},
+  {id:'d19',month:6, title:'Begin harvesting',             desc:'Radishes (30 days), lettuce (45–60 days), beans, cucumbers, zucchini.',                          priority:'med', done:false,custom:false},
+  {id:'d20',month:7, title:'Harvest potatoes',             desc:'Dig when tops die back. Cure in dark for 2 weeks before storage.',                               priority:'med', done:false,custom:false},
+  {id:'d21',month:7, title:'Plan fall crops',              desc:'Direct sow fall lettuce, radishes, carrots in late August.',                                      priority:'low', done:false,custom:false},
+  {id:'d22',month:8, title:'Harvest winter squash',        desc:'Cut when rind is hard and stem is dry. Cure in sun 10 days. Store cool & dry.',                  priority:'med', done:false,custom:false},
+  {id:'d23',month:9, title:'Clean up spent crops',         desc:'Pull finished plants. Compost healthy; trash diseased plants.',                                   priority:'med', done:false,custom:false},
+  {id:'d24',month:9, title:'Plant garlic & cover crop',    desc:'Garlic cloves 6 wks before freeze. Sow winter rye or crimson clover as cover crop.',             priority:'med', done:false,custom:false},
+  {id:'d25',month:10,title:'Winterize beds',               desc:'Add leaf mulch or straw. Clean and store tools. Note what worked for next year.',                 priority:'low', done:false,custom:false}
+];
+var MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var actT=[],aF=-1;
+try{
+  var _sv=localStorage.getItem('og_tasks');
+  if(_sv){actT=JSON.parse(_sv);}
+  else{actT=DT.map(function(t){return{id:t.id,month:t.month,title:t.title,desc:t.desc,priority:t.priority,done:t.done,custom:t.custom};});saveActs();}
+}catch(e){actT=DT.map(function(t){return{id:t.id,month:t.month,title:t.title,desc:t.desc,priority:t.priority,done:t.done,custom:t.custom};});}
+function saveActs(){try{localStorage.setItem('og_tasks',JSON.stringify(actT));}catch(e){}}
+function buildActions(){
+  var h='<div class="act-month-bar"><button class="act-mbtn'+(aF===-1?' act':'')+'" onclick="aMF(-1)">All</button>';
+  for(var m=0;m<12;m++)h+='<button class="act-mbtn'+(aF===m?' act':'')+'" onclick="aMF('+m+')">'+MS[m]+'</button>';
+  h+='</div>';
+  h+='<div class="act-add"><h3>+ Add Task</h3>';
+  h+='<div class="act-frow"><input type="text" id="at-t" placeholder="Task title..."><select id="at-m">';
+  for(var m2=0;m2<12;m2++)h+='<option value="'+m2+'">'+MS[m2]+'</option>';
+  h+='</select><select id="at-p"><option value="high">High</option><option value="med" selected>Med</option><option value="low">Low</option></select></div>';
+  h+='<div class="act-frow"><textarea id="at-d" placeholder="Details / notes (optional)..."></textarea></div>';
+  h+='<div class="act-frow"><button class="act-abtn" onclick="aAdd()">Add Task</button></div></div>';
+  var fl=actT.filter(function(t){return aF===-1||t.month===aF;});
+  var gd={};fl.forEach(function(t){if(!gd[t.month])gd[t.month]=[];gd[t.month].push(t);});
+  var po={high:0,med:1,low:2};
+  Object.keys(gd).map(Number).sort(function(a,b){return a-b;}).forEach(function(m3){
+    var g=gd[m3];g.sort(function(a,b){if(a.done!==b.done)return a.done?1:-1;return(po[a.priority]||1)-(po[b.priority]||1);});
+    h+='<div class="act-grp"><div class="act-grpt">'+MN[m3]+' ('+g.length+')</div>';
+    g.forEach(function(t){
+      h+='<div class="act-card'+(t.done?' done':'')+'"><input type="checkbox" class="act-chk"'+(t.done?' checked':'')+' onchange="aT(\''+t.id+'\',this.checked)">';
+      h+='<div class="act-body"><div class="act-title">'+t.title+'</div>';
+      if(t.desc)h+='<div class="act-desc">'+t.desc+'</div>';
+      h+='<div class="act-meta"><span class="pri pri-'+t.priority+'">'+t.priority+'</span>';
+      if(t.custom)h+='<button class="act-del" onclick="aDel(\''+t.id+'\')">✕ remove</button>';
+      h+='</div></div></div>';
+    });
+    h+='</div>';
+  });
+  if(!fl.length)h+='<div style="text-align:center;color:#555;padding:24px;font-style:italic">No tasks for this period.</div>';
+  $('actions-content').innerHTML=h;
+  try{$('at-m').value=new Date().getMonth();}catch(e){}
+}
+function aMF(m){aF=m;buildActions();}
+function aT(id,chk){actT.forEach(function(t){if(t.id===id)t.done=chk;});saveActs();buildActions();}
+function aDel(id){actT=actT.filter(function(t){return t.id!==id;});saveActs();buildActions();}
+function aAdd(){
+  var title=$('at-t').value.trim();if(!title){$('at-t').focus();return;}
+  var m=parseInt($('at-m').value),p=$('at-p').value,d=$('at-d').value.trim();
+  actT.push({id:'c'+Date.now(),month:m,title:title,desc:d,priority:p,done:false,custom:true});
+  saveActs();$('at-t').value='';$('at-d').value='';aF=m;buildActions();
+}
+
+// ── Custom Plants ──────────────────────────────────────────────────────────
+var customPlants=[];
+try{var _cp=localStorage.getItem('og_custom_plants');if(_cp)customPlants=JSON.parse(_cp);}catch(e){}
+function saveCustomPlants(){try{localStorage.setItem('og_custom_plants',JSON.stringify(customPlants));}catch(e){}}
+
+var TIMING_DOY={early:{pd:82,hd:180},mid:{pd:135,hd:260},late:{pd:140,hd:275}};
+var CAT_OPTS=[{v:'root',l:'Root Crop'},{v:'veg',l:'Vegetable'},{v:'flower',l:'Flower'},{v:'squash',l:'Squash'},{v:'fruit',l:'Fruiting Veg'},{v:'herb',l:'Herb'},{v:'other',l:'Other'}];
+var TIMING_OPTS=[{v:'early',l:'Early Spring (Mar–Apr)'},{v:'mid',l:'After Frost (May)'},{v:'late',l:'Warm Season (May–Jun)'}];
+var SUN_OPTS=['Full sun (8+ hrs)','Full sun (6–8 hrs)','Full sun (6+ hrs)','Partial shade (4–6 hrs)','Part shade ok','Shade tolerant'];
+
+function compilePlant(cp){
+  var p=Object.assign({},cp);p.cells=[];
+  if(!p.rows||!p.rows.length)return p;
+  // Find free cells (not used by built-ins or prior custom plants)
+  var used={};
+  PLANTS.forEach(function(bp){bp.cells.forEach(function(cell){used[cell.r+','+cell.c]=true;});});
+  customPlants.forEach(function(other){
+    if(other.id===cp.id)return;
+    (other.cells||[]).forEach(function(cell){used[cell.r+','+cell.c]=true;});
+  });
+  var cn=cp.cellCount||2,pl=0;
+  for(var ri=0;ri<p.rows.length&&pl<cn;ri++){
+    var row=p.rows[ri];
+    for(var col=0;col<GC&&pl<cn;col++){
+      if(!used[row+','+col]){p.cells.push({r:row,c:col});pl++;}
+    }
+  }
+  return p;
+}
+function recompileCustomPlants(){customPlants=customPlants.map(function(cp){return compilePlant(cp);});}
+
+// ── Plant Manager UI ───────────────────────────────────────────────────────
+var pmEditId=null,pmFormOpen=false;
+
+function allActivePlants(){return PLANTS.concat(customPlants);}
+
+function buildPlantManager(){
+  var c=$('plants-content'),h='';
+  if(pmFormOpen){h+=renderPlantForm();}
+  else{h+='<button class="pm-add-new-btn" onclick="pmOpenForm(null)">+ Add New Plant</button>';}
+
+  h+='<div class="pm-section">';
+  h+='<div class="pm-section-title">Your Custom Plants <span style="font-size:8px;color:#555;font-weight:400">('+customPlants.length+')</span></div>';
+  if(!customPlants.length){
+    h+='<div style="color:#555;font-size:10px;font-style:italic;padding:10px 0">No custom plants yet. Use the form above to add one — it will appear on the map, in the Guide, and generate a Task.</div>';
+  } else {
+    customPlants.forEach(function(cp){h+=renderPlantCard(cp,true);});
+  }
+  h+='</div>';
+
+  h+='<div class="pm-section">';
+  h+='<div class="pm-section-title">Built-in Plants <span style="font-size:8px;color:#444;font-weight:400;margin-left:6px">view only</span></div>';
+  PLANTS.forEach(function(p){
+    var gp=GP.filter(function(g){return g.n===p.name;})[0]||{};
+    h+=renderPlantCard({id:p.id,name:p.name,cat:p.cat,color:p.color,timing:p.timing,
+      timingLabel:gp.tl,method:gp.m,soil:gp.s,sun:gp.sun,companions:gp.cp,rows:p.rows,cells:p.cells},false);
+  });
+  h+='</div>';
+  c.innerHTML=h;
+}
+
+function renderPlantCard(cp,isCustom){
+  var h='<div class="pm-card'+(isCustom?' custom-plant':'')+'">';
+  h+='<div class="pm-swatch" style="background:'+(cp.color||'#888')+'"></div>';
+  h+='<div class="pm-body">';
+  h+='<div class="pm-name">'+escHtml(cp.name)+(isCustom?'':' <span class="pm-built-in-badge">built-in</span>')+'</div>';
+  h+='<div class="pm-meta">';
+  if(cp.method)h+='<b>Method:</b> '+escHtml(cp.method)+'<br>';
+  if(cp.soil)  h+='<b>Soil:</b> '+escHtml(cp.soil)+'<br>';
+  if(cp.sun)   h+='<b>Sun:</b> '+escHtml(cp.sun)+'<br>';
+  if(cp.companions)h+='<b>With:</b> '+escHtml(cp.companions);
+  h+='</div>';
+  h+='<div class="pm-tags">';
+  h+='<span class="pm-tag pm-tag-cat-'+(cp.cat||'other')+'">'+(cp.cat||'other')+'</span>';
+  h+='<span class="pm-tag pm-tag-timing-'+(cp.timing||'mid')+'">'+(cp.timing||'mid')+'</span>';
+  if(cp.cells&&cp.cells.length)h+='<span class="pm-tag" style="background:#1a1e26;color:#666">'+cp.cells.length+' map cells</span>';
+  h+='</div></div>';
+  if(isCustom){
+    h+='<div class="pm-actions">';
+    h+='<button class="pm-edit-btn" onclick="pmOpenForm(\''+cp.id+'\')">✎ Edit</button>';
+    h+='<button class="pm-del-btn"  onclick="pmDelete(\''+cp.id+'\')">✕</button>';
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+
+function renderPlantForm(){
+  var isEdit=pmEditId!==null;
+  var cp=isEdit?customPlants.filter(function(p){return p.id===pmEditId;})[0]:null;
+  var v=function(f,d){return cp&&cp[f]!==undefined?cp[f]:d;};
+  var MS2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var h='<div class="pm-form">';
+  h+='<div class="pm-form-title">'+(isEdit?'✎ Edit: '+escHtml(v('name','')):'+ New Plant')+'<button class="pm-form-close" onclick="pmCloseForm()">✕</button></div>';
+
+  // Name / Category / Color
+  h+='<div class="pm-row">';
+  h+='<div class="pm-field" style="flex:2"><label>Plant Name</label><input type="text" id="pf-name" value="'+escHtml(v('name',''))+'" placeholder="e.g. Basil"></div>';
+  h+='<div class="pm-field"><label>Category</label><select id="pf-cat">';
+  CAT_OPTS.forEach(function(o){h+='<option value="'+o.v+'"'+(v('cat','veg')===o.v?' selected':'')+'>'+o.l+'</option>';});
+  h+='</select></div>';
+  h+='<div class="pm-field" style="flex:0;min-width:70px"><label>Color</label><input type="color" id="pf-color" value="'+v('color','#50a850')+'"></div>';
+  h+='</div>';
+
+  // Timing / Sun / Method
+  h+='<div class="pm-row">';
+  h+='<div class="pm-field"><label>Timing</label><select id="pf-timing">';
+  TIMING_OPTS.forEach(function(o){h+='<option value="'+o.v+'"'+(v('timing','mid')===o.v?' selected':'')+'>'+o.l+'</option>';});
+  h+='</select></div>';
+  h+='<div class="pm-field"><label>Sun Needs</label><select id="pf-sun">';
+  SUN_OPTS.forEach(function(o){h+='<option value="'+o+'"'+(v('sun',SUN_OPTS[1])===o?' selected':'')+'>'+o+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  // Method / Timing label
+  h+='<div class="pm-row">';
+  h+='<div class="pm-field"><label>Planting Method</label><input type="text" id="pf-method" value="'+escHtml(v('method',''))+'" placeholder="e.g. Direct sow, Transplant only"></div>';
+  h+='<div class="pm-field"><label>Timing Label</label><input type="text" id="pf-timinglabel" value="'+escHtml(v('timingLabel',''))+'" placeholder="e.g. After Last Frost"></div>';
+  h+='</div>';
+
+  // Soil / Companions
+  h+='<div class="pm-row">';
+  h+='<div class="pm-field"><label>Soil Notes</label><input type="text" id="pf-soil" value="'+escHtml(v('soil',''))+'" placeholder="e.g. Rich, well-drained, pH 6–7"></div>';
+  h+='<div class="pm-field"><label>Companions</label><input type="text" id="pf-companions" value="'+escHtml(v('companions',''))+'" placeholder="e.g. Tomatoes, Basil"></div>';
+  h+='</div>';
+
+  // Garden rows
+  var curRows=v('rows',[3,4]);
+  h+='<div class="pm-field" style="margin-bottom:4px"><label>Garden Rows on Map (R1 = south, R8 = north)</label></div>';
+  h+='<div class="pm-row-check">';
+  for(var ri=0;ri<GR;ri++){
+    h+='<label><input type="checkbox" name="pf-rows" value="'+ri+'"'+(curRows.indexOf(ri)>-1?' checked':'')+'>R'+(ri+1)+'</label>';
+  }
+  h+='</div>';
+
+  // Cell count / Task month / priority
+  h+='<div class="pm-row">';
+  h+='<div class="pm-field" style="flex:0;min-width:110px"><label>Map Cells</label><input type="number" id="pf-cellcount" value="'+v('cellCount',2)+'" min="1" max="8"></div>';
+  h+='<div class="pm-field"><label>Auto-Task Month</label><select id="pf-taskmonth">';
+  h+='<option value="-1"'+(v('taskMonth',-1)===-1?' selected':'')+'>None</option>';
+  MS2.forEach(function(m,i){h+='<option value="'+i+'"'+(v('taskMonth',-1)===i?' selected':'')+'>'+m+'</option>';});
+  h+='</select></div>';
+  h+='<div class="pm-field" style="flex:0;min-width:90px"><label>Priority</label><select id="pf-taskpri">';
+  ['high','med','low'].forEach(function(p){h+='<option value="'+p+'"'+(v('taskPriority','med')===p?' selected':'')+'>'+p+'</option>';});
+  h+='</select></div>';
+  h+='</div>';
+
+  h+='<div class="pm-row"><div class="pm-field"><label>Task Description</label><input type="text" id="pf-taskdesc" value="'+escHtml(v('taskDesc',''))+'" placeholder="Auto-filled from method + timing if blank"></div></div>';
+
+  h+='<div style="margin-top:12px">';
+  h+='<button class="pm-submit-btn" onclick="pmSave()">'+(isEdit?'Update Plant':'Add to Garden')+'</button>';
+  h+='<button class="pm-cancel-btn" onclick="pmCloseForm()">Cancel</button>';
+  h+='</div></div>';
+  return h;
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function pmOpenForm(id){pmEditId=id;pmFormOpen=true;buildPlantManager();$('plants-content').scrollTop=0;}
+function pmCloseForm(){pmFormOpen=false;pmEditId=null;buildPlantManager();}
+
+function pmSave(){
+  var name=($('pf-name').value||'').trim();
+  if(!name){$('pf-name').style.borderColor='#f85050';$('pf-name').focus();return;}
+  $('pf-name').style.borderColor='';
+  var rows=[];
+  document.querySelectorAll('input[name="pf-rows"]:checked').forEach(function(cb){rows.push(parseInt(cb.value));});
+  var timing=$('pf-timing').value;
+  var doys=TIMING_DOY[timing]||{pd:135,hd:260};
+  var taskMonth=parseInt($('pf-taskmonth').value);
+  var id=pmEditId||(name.toLowerCase().replace(/[^a-z0-9]/g,'_')+'_'+Date.now());
+  var taskDesc=$('pf-taskdesc').value.trim();
+  var method=$('pf-method').value.trim();
+  var timingLabel=$('pf-timinglabel').value.trim();
+  if(!taskDesc&&method)taskDesc=method+(timingLabel?' — '+timingLabel:'');
+
+  var cp={
+    id:id,name:name,cat:$('pf-cat').value,color:$('pf-color').value,
+    timing:timing,timingLabel:timingLabel||timing,
+    pd:doys.pd,hd:doys.hd,
+    rows:rows.length?rows:[3,4],cellCount:Math.max(1,parseInt($('pf-cellcount').value)||2),
+    method:method,soil:$('pf-soil').value.trim(),
+    sun:$('pf-sun').value,companions:$('pf-companions').value.trim(),
+    taskMonth:taskMonth,taskPriority:$('pf-taskpri').value,taskDesc:taskDesc,cells:[]
+  };
+
+  if(pmEditId){
+    var idx=-1;customPlants.forEach(function(p,i){if(p.id===pmEditId)idx=i;});
+    if(idx>-1)customPlants[idx]=cp;
+    actT=actT.filter(function(t){return t.id!=='plant_task_'+pmEditId;});
+  } else {
+    customPlants.push(cp);
+  }
+  plantOn[cp.id]=true;
+
+  if(taskMonth>=0){
+    actT=actT.filter(function(t){return t.id!=='plant_task_'+id;});
+    actT.push({id:'plant_task_'+id,month:taskMonth,title:'Plant '+name,
+      desc:taskDesc,priority:cp.taskPriority||'med',done:false,custom:true});
+    saveActs();
+  }
+
+  recompileCustomPlants();saveCustomPlants();
+  pmFormOpen=false;pmEditId=null;
+  buildPlantList();buildPlantManager();render();
+}
+
+function pmDelete(id){
+  customPlants=customPlants.filter(function(p){return p.id!==id;});
+  actT=actT.filter(function(t){return t.id!=='plant_task_'+id;});
+  delete plantOn[id];
+  saveCustomPlants();saveActs();
+  recompileCustomPlants();buildPlantList();buildPlantManager();render();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+recompileCustomPlants(); // assign map cells to any saved custom plants
+</script>
+</body>
+</html>
